@@ -61,12 +61,38 @@ orgs:
 	}
 }
 
+func TestLoadConfigPAT(t *testing.T) {
+	path := writeConfig(t, `
+orgs:
+  - name: org1
+    pat: ddpat_secret
+`)
+
+	config, err := LoadConfig(path)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	org := config.Org("org1")
+
+	if !org.UsePAT() {
+		t.Error("org1 should use PAT")
+	}
+
+	if got := authHeaders(org); got["Authorization"] != "Bearer ddpat_secret" {
+		t.Errorf("authHeaders = %v", got)
+	}
+}
+
 func TestLoadConfigErrors(t *testing.T) {
 	cases := map[string]string{
 		"no orgs":        `endpoint: https://example.com`,
 		"missing name":   "orgs:\n  - api_key: a\n    app_key: b\n",
 		"missing apikey": "orgs:\n  - name: org1\n    app_key: b\n",
 		"missing appkey": "orgs:\n  - name: org1\n    api_key: a\n",
+		"no auth":        "orgs:\n  - name: org1\n",
+		"pat and keys":   "orgs:\n  - name: org1\n    pat: ddpat_x\n    api_key: a\n    app_key: b\n",
 		"duplicate":      "orgs:\n  - name: org1\n    api_key: a\n    app_key: b\n  - name: org1\n    api_key: a\n    app_key: b\n",
 	}
 

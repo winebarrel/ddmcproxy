@@ -104,11 +104,8 @@ func (proxy *Proxy) session(ctx context.Context, org string) (*mcp.ClientSession
 		Endpoint: orgConfig.Endpoint,
 		HTTPClient: &http.Client{
 			Transport: &headerTransport{
-				base: http.DefaultTransport,
-				headers: map[string]string{
-					"DD_API_KEY":         orgConfig.APIKey,
-					"DD_APPLICATION_KEY": orgConfig.AppKey,
-				},
+				base:    http.DefaultTransport,
+				headers: authHeaders(orgConfig),
 			},
 		},
 	}
@@ -147,6 +144,22 @@ func listTools(ctx context.Context, session *mcp.ClientSession) ([]*mcp.Tool, er
 	}
 
 	return tools, nil
+}
+
+// authHeaders returns the HTTP headers used to authenticate with the upstream
+// Datadog MCP server for the given org: a bearer token when a PAT/SAT is
+// configured, otherwise the legacy API key + Application key pair.
+func authHeaders(org *OrgConfig) map[string]string {
+	if org.UsePAT() {
+		return map[string]string{
+			"Authorization": "Bearer " + org.PAT,
+		}
+	}
+
+	return map[string]string{
+		"DD_API_KEY":         org.APIKey,
+		"DD_APPLICATION_KEY": org.AppKey,
+	}
 }
 
 // headerTransport injects fixed headers (the Datadog credentials) into every
