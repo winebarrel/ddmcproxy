@@ -1,6 +1,7 @@
 # ddmcproxy
 
 [![CI](https://github.com/winebarrel/ddmcproxy/actions/workflows/ci.yml/badge.svg)](https://github.com/winebarrel/ddmcproxy/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/winebarrel/ddmcproxy/branch/main/graph/badge.svg)](https://codecov.io/gh/winebarrel/ddmcproxy)
 
 A multi-org proxy for the [Datadog MCP Server](https://docs.datadoghq.com/bits_ai/mcp_server/setup/).
 
