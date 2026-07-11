@@ -4,15 +4,15 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func writeConfig(t *testing.T, content string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.yml")
-
-	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.WriteFile(path, []byte(content), 0600))
 
 	return path
 }
@@ -32,33 +32,20 @@ orgs:
 `)
 
 	config, err := LoadConfig(path)
+	require.NoError(t, err)
 
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if got := config.OrgNames(); got[0] != "org1" || got[1] != "org2" {
-		t.Errorf("OrgNames = %v", got)
-	}
+	assert.Equal(t, []string{"org1", "org2"}, config.OrgNames())
 
 	// Default endpoint is filled in.
-	if config.Org("org1").Endpoint != DefaultEndpoint {
-		t.Errorf("org1 endpoint = %s, want default", config.Org("org1").Endpoint)
-	}
+	assert.Equal(t, DefaultEndpoint, config.Org("org1").Endpoint)
 
 	// Per-org endpoint override is kept.
-	if config.Org("org2").Endpoint != "https://mcp.datadoghq.eu/api/unstable/mcp-server/mcp" {
-		t.Errorf("org2 endpoint = %s", config.Org("org2").Endpoint)
-	}
+	assert.Equal(t, "https://mcp.datadoghq.eu/api/unstable/mcp-server/mcp", config.Org("org2").Endpoint)
 
 	// Env expansion.
-	if config.Org("org2").AppKey != "app-from-env" {
-		t.Errorf("org2 app_key = %s, want app-from-env", config.Org("org2").AppKey)
-	}
+	assert.Equal(t, "app-from-env", config.Org("org2").AppKey)
 
-	if config.Org("nope") != nil {
-		t.Error("Org(nope) should be nil")
-	}
+	assert.Nil(t, config.Org("nope"))
 }
 
 func TestLoadConfigToken(t *testing.T) {
@@ -68,22 +55,24 @@ func TestLoadConfigToken(t *testing.T) {
 			path := writeConfig(t, "orgs:\n  - name: org1\n    token: "+token+"\n")
 
 			config, err := LoadConfig(path)
-
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			org := config.Org("org1")
 
-			if !org.UseToken() {
-				t.Error("org1 should use a token")
-			}
-
-			if got := authHeaders(org); got["Authorization"] != "Bearer "+token {
-				t.Errorf("authHeaders = %v", got)
-			}
+			assert.True(t, org.UseToken())
+			assert.Equal(t, "Bearer "+token, authHeaders(org)["Authorization"])
 		})
 	}
+}
+
+func TestLoadConfigFileErrors(t *testing.T) {
+	// Missing file.
+	_, err := LoadConfig(filepath.Join(t.TempDir(), "does-not-exist.yml"))
+	assert.Error(t, err)
+
+	// Malformed YAML.
+	_, err = LoadConfig(writeConfig(t, "orgs: [1, 2"))
+	assert.Error(t, err)
 }
 
 func TestLoadConfigErrors(t *testing.T) {
@@ -99,9 +88,8 @@ func TestLoadConfigErrors(t *testing.T) {
 
 	for name, content := range cases {
 		t.Run(name, func(t *testing.T) {
-			if _, err := LoadConfig(writeConfig(t, content)); err == nil {
-				t.Errorf("expected error for %q", name)
-			}
+			_, err := LoadConfig(writeConfig(t, content))
+			assert.Error(t, err)
 		})
 	}
 }

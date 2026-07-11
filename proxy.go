@@ -36,16 +36,29 @@ func NewProxy(config *Config, version string) *Proxy {
 	}
 }
 
-// Run connects to the upstream server, mirrors its tools and serves the proxy
-// over stdio until the client disconnects or ctx is cancelled.
+// Run builds the proxy server and serves it over stdio until the client
+// disconnects or ctx is cancelled.
 func (proxy *Proxy) Run(ctx context.Context) error {
-	if proxy.config == nil || len(proxy.config.Orgs) == 0 {
-		return fmt.Errorf("no orgs are configured")
-	}
-
 	// Close cached upstream sessions when the proxy stops (client disconnect or
 	// ctx cancellation) so their connections are released promptly.
 	defer proxy.closeSessions()
+
+	server, err := proxy.buildServer(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	return server.Run(ctx, &mcp.StdioTransport{})
+}
+
+// buildServer connects to the upstream Datadog MCP server, mirrors its tools
+// (each with an injected org argument, plus a proxy-native list_orgs tool) and
+// returns a server ready to serve. It does not start serving.
+func (proxy *Proxy) buildServer(ctx context.Context) (*mcp.Server, error) {
+	if proxy.config == nil || len(proxy.config.Orgs) == 0 {
+		return nil, fmt.Errorf("no orgs are configured")
+	}
 
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    appName,
@@ -58,13 +71,13 @@ func (proxy *Proxy) Run(ctx context.Context) error {
 	session, err := proxy.session(ctx, primary)
 
 	if err != nil {
-		return fmt.Errorf("failed to connect to the upstream server as org '%s': %w", primary, err)
+		return nil, fmt.Errorf("failed to connect to the upstream server as org '%s': %w", primary, err)
 	}
 
 	tools, err := listTools(ctx, session)
 
 	if err != nil {
-		return fmt.Errorf("failed to list upstream tools: %w", err)
+		return nil, fmt.Errorf("failed to list upstream tools: %w", err)
 	}
 
 	orgNames := proxy.config.OrgNames()
@@ -76,7 +89,7 @@ func (proxy *Proxy) Run(ctx context.Context) error {
 		wrapped, handler, err := proxy.wrapTool(tool, orgNames)
 
 		if err != nil {
-			return fmt.Errorf("failed to wrap tool '%s': %w", tool.Name, err)
+			return nil, fmt.Errorf("failed to wrap tool '%s': %w", tool.Name, err)
 		}
 
 		server.AddTool(wrapped, handler)
@@ -84,7 +97,7 @@ func (proxy *Proxy) Run(ctx context.Context) error {
 
 	log.Printf("[%s] serving %d Datadog tools for %d orgs: %v", appName, len(tools), len(orgNames), orgNames)
 
-	return server.Run(ctx, &mcp.StdioTransport{})
+	return server, nil
 }
 
 // session returns a connected upstream session for the org, creating and
