@@ -174,11 +174,17 @@ func prependRequired(existing any, name string) []any {
 	return required
 }
 
-// dropSession removes a cached upstream session so the next call reconnects.
+// dropSession removes a cached upstream session so the next call reconnects,
+// closing the removed session to release its underlying connection.
 func (proxy *Proxy) dropSession(org string) {
 	proxy.mu.Lock()
-	defer proxy.mu.Unlock()
+	session, ok := proxy.sessions[org]
 	delete(proxy.sessions, org)
+	proxy.mu.Unlock()
+
+	if ok {
+		_ = session.Close()
+	}
 }
 
 func errorResult(format string, args ...any) *mcp.CallToolResult {

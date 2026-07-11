@@ -7,13 +7,13 @@ A multi-org proxy for the [Datadog MCP Server](https://docs.datadoghq.com/bits_a
 The Datadog MCP server does not support multiple organizations in a single
 connection. `ddmcproxy` sits in front of it, mirrors all of its tools, and adds
 an `org` argument to each tool. When a tool is called, the proxy picks the
-matching org's API/APP keys and forwards the request to the Datadog MCP server.
+matching org's credentials and forwards the request to the Datadog MCP server.
 
 ```
-Claude Code ──stdio──▶ ddmcproxy ──HTTP(DD_API_KEY/DD_APPLICATION_KEY)──▶ Datadog MCP
+Claude Code ──stdio──▶ ddmcproxy ──HTTP(token or DD_API_KEY/DD_APPLICATION_KEY)──▶ Datadog MCP
                           │
-                          ├─ org=foo ─▶ foo's keys
-                          └─ org=bar ─▶ bar's keys
+                          ├─ org=foo ─▶ foo's credentials
+                          └─ org=bar ─▶ bar's credentials
 ```
 
 ## Install
@@ -95,6 +95,7 @@ org names from your config.
   the same set of tools.
 - Each upstream tool is re-registered with a required `org` string argument
   (enumerated over the configured org names).
-- On a tool call, the proxy strips the `org` argument, looks up that org's keys,
-  connects (lazily, then cached) to the Datadog MCP server with the
-  `DD_API_KEY` / `DD_APPLICATION_KEY` headers, and forwards the call.
+- On a tool call, the proxy strips the `org` argument, looks up that org's
+  credentials, connects (lazily, then cached) to the Datadog MCP server -- with
+  an `Authorization: Bearer` token, or the `DD_API_KEY` / `DD_APPLICATION_KEY`
+  headers -- and forwards the call.
