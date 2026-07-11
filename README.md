@@ -1,5 +1,7 @@
 # ddmcproxy
 
+[![CI](https://github.com/winebarrel/ddmcproxy/actions/workflows/ci.yml/badge.svg)](https://github.com/winebarrel/ddmcproxy/actions/workflows/ci.yml)
+
 A multi-org proxy for the [Datadog MCP Server](https://docs.datadoghq.com/bits_ai/mcp_server/setup/).
 
 The Datadog MCP server does not support multiple organizations in a single
