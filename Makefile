@@ -13,6 +13,10 @@ test:
 build:
 	go build ./cmd/ddmcproxy
 
+.PHONY: install
+install:
+	go install ./cmd/ddmcproxy
+
 .PHONY: lint
 lint:
 	golangci-lint run

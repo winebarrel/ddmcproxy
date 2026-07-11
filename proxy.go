@@ -61,6 +61,9 @@ func (proxy *Proxy) Run(ctx context.Context) error {
 
 	orgNames := proxy.config.OrgNames()
 
+	// Add a proxy-native tool so clients can discover the configured orgs.
+	server.AddTool(proxy.listOrgsTool())
+
 	for _, tool := range tools {
 		wrapped, handler, err := proxy.wrapTool(tool, orgNames)
 

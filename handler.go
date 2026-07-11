@@ -13,6 +13,48 @@ import (
 // the target Datadog organization.
 const orgArg = "org"
 
+// listOrgsTool returns a proxy-native tool that lists the configured Datadog
+// organizations (names and endpoints only, never credentials). It lets a client
+// discover the valid values for the injected "org" argument.
+func (proxy *Proxy) listOrgsTool() (*mcp.Tool, mcp.ToolHandler) {
+	tool := &mcp.Tool{
+		Name:        "list_orgs",
+		Description: "List the Datadog organizations configured in ddmcproxy. Use the returned names as the 'org' argument of the other tools.",
+		InputSchema: map[string]any{
+			"type":                 "object",
+			"properties":           map[string]any{},
+			"additionalProperties": false,
+		},
+	}
+
+	handler := func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		type orgInfo struct {
+			Name     string `json:"name"`
+			Endpoint string `json:"endpoint"`
+		}
+
+		orgs := make([]orgInfo, len(proxy.config.Orgs))
+
+		for i, org := range proxy.config.Orgs {
+			orgs[i] = orgInfo{Name: org.Name, Endpoint: org.Endpoint}
+		}
+
+		buf, err := json.Marshal(map[string]any{"orgs": orgs})
+
+		if err != nil {
+			return errorResult("failed to encode orgs: %s", err), nil
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: string(buf)},
+			},
+		}, nil
+	}
+
+	return tool, handler
+}
+
 // wrapTool returns a copy of the upstream tool with the "org" argument injected,
 // together with a handler that forwards the call to the org's Datadog MCP server.
 func (proxy *Proxy) wrapTool(tool *mcp.Tool, orgNames []string) (*mcp.Tool, mcp.ToolHandler, error) {
