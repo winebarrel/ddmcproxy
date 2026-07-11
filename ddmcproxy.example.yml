@@ -3,12 +3,12 @@
 
 # Values are expanded with os.ExpandEnv, so ${ENV_VAR} references work.
 #
-# Each org authenticates with EITHER a Personal/Service Access Token (pat) OR
-# the legacy api_key + app_key pair -- not both.
+# Each org authenticates with EITHER a token (a PAT or SAT) OR the legacy
+# api_key + app_key pair -- not both.
 orgs:
-  # Personal/Service Access Token (preferred).
+  # Personal (ddpat_) or Service (ddsat_) Access Token (preferred).
   - name: foo
-    pat: ${FOO_DD_PAT}
+    token: ${FOO_DD_TOKEN}
   # Legacy API key + Application key.
   - name: bar
     api_key: ${BAR_DD_API_KEY}

@@ -61,27 +61,28 @@ orgs:
 	}
 }
 
-func TestLoadConfigPAT(t *testing.T) {
-	path := writeConfig(t, `
-orgs:
-  - name: org1
-    pat: ddpat_secret
-`)
+func TestLoadConfigToken(t *testing.T) {
+	// A token authenticates as a bearer token, whether it is a PAT or a SAT.
+	for name, token := range map[string]string{"pat": "ddpat_secret", "sat": "ddsat_secret"} {
+		t.Run(name, func(t *testing.T) {
+			path := writeConfig(t, "orgs:\n  - name: org1\n    token: "+token+"\n")
 
-	config, err := LoadConfig(path)
+			config, err := LoadConfig(path)
 
-	if err != nil {
-		t.Fatal(err)
-	}
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	org := config.Org("org1")
+			org := config.Org("org1")
 
-	if !org.UsePAT() {
-		t.Error("org1 should use PAT")
-	}
+			if !org.UseToken() {
+				t.Error("org1 should use a token")
+			}
 
-	if got := authHeaders(org); got["Authorization"] != "Bearer ddpat_secret" {
-		t.Errorf("authHeaders = %v", got)
+			if got := authHeaders(org); got["Authorization"] != "Bearer "+token {
+				t.Errorf("authHeaders = %v", got)
+			}
+		})
 	}
 }
 
@@ -92,7 +93,7 @@ func TestLoadConfigErrors(t *testing.T) {
 		"missing apikey": "orgs:\n  - name: org1\n    app_key: b\n",
 		"missing appkey": "orgs:\n  - name: org1\n    api_key: a\n",
 		"no auth":        "orgs:\n  - name: org1\n",
-		"pat and keys":   "orgs:\n  - name: org1\n    pat: ddpat_x\n    api_key: a\n    app_key: b\n",
+		"token and keys": "orgs:\n  - name: org1\n    token: ddpat_x\n    api_key: a\n    app_key: b\n",
 		"duplicate":      "orgs:\n  - name: org1\n    api_key: a\n    app_key: b\n  - name: org1\n    api_key: a\n    app_key: b\n",
 	}
 

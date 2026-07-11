@@ -13,12 +13,12 @@ const DefaultEndpoint = "https://mcp.datadoghq.com/api/unstable/mcp-server/mcp"
 
 // OrgConfig holds the credentials for a single Datadog organization.
 //
-// Authentication is either a Personal/Service Access Token (PAT), passed as a
-// bearer token, or the legacy API key + Application key pair. Exactly one of the
-// two must be configured.
+// Authentication is either a token -- a Personal (ddpat_) or Service (ddsat_)
+// Access Token, passed as a bearer token -- or the legacy API key + Application
+// key pair. Exactly one of the two must be configured.
 type OrgConfig struct {
 	Name     string `yaml:"name"`
-	PAT      string `yaml:"pat,omitempty"`
+	Token    string `yaml:"token,omitempty"`
 	APIKey   string `yaml:"api_key,omitempty"`
 	AppKey   string `yaml:"app_key,omitempty"`
 	Endpoint string `yaml:"endpoint,omitempty"`
@@ -89,25 +89,25 @@ func (config *Config) validate() error {
 	return nil
 }
 
-// UsePAT reports whether the org authenticates with a bearer token (PAT/SAT)
-// rather than the legacy API key + Application key pair.
-func (org *OrgConfig) UsePAT() bool {
-	return org.PAT != ""
+// UseToken reports whether the org authenticates with a bearer token (a PAT or
+// SAT) rather than the legacy API key + Application key pair.
+func (org *OrgConfig) UseToken() bool {
+	return org.Token != ""
 }
 
 // validateAuth ensures exactly one authentication method is configured: either a
-// PAT, or both an API key and an Application key.
+// token, or both an API key and an Application key.
 func (org *OrgConfig) validateAuth() error {
-	if org.PAT != "" {
+	if org.Token != "" {
 		if org.APIKey != "" || org.AppKey != "" {
-			return fmt.Errorf("org '%s': specify either 'pat' or 'api_key'/'app_key', not both", org.Name)
+			return fmt.Errorf("org '%s': specify either 'token' or 'api_key'/'app_key', not both", org.Name)
 		}
 
 		return nil
 	}
 
 	if org.APIKey == "" || org.AppKey == "" {
-		return fmt.Errorf("org '%s': either 'pat' or both 'api_key' and 'app_key' are required", org.Name)
+		return fmt.Errorf("org '%s': either 'token' or both 'api_key' and 'app_key' are required", org.Name)
 	}
 
 	return nil

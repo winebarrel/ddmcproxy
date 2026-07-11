@@ -32,10 +32,10 @@ can be referenced as `${ENV_VAR}` instead of being written in plain text.
 # endpoint: https://mcp.datadoghq.com/api/unstable/mcp-server/mcp
 
 orgs:
-  # Each org authenticates with EITHER a Personal/Service Access Token (pat)
-  # OR the legacy api_key + app_key pair -- not both.
+  # Each org authenticates with EITHER a token (a PAT or SAT) OR the legacy
+  # api_key + app_key pair -- not both.
   - name: foo
-    pat: ${FOO_DD_PAT}
+    token: ${FOO_DD_TOKEN}
   - name: bar
     api_key: ${BAR_DD_API_KEY}
     app_key: ${BAR_DD_APP_KEY}
@@ -45,11 +45,13 @@ orgs:
 
 Authentication per org is one of:
 
-- `pat`: a Datadog [Personal or Service Access Token][pat] (`ddpat_`/`ddsat_`),
-  sent as an `Authorization: Bearer` header. Preferred.
+- `token`: a Datadog [Personal Access Token][pat] (`ddpat_`) or
+  [Service Access Token][sat] (`ddsat_`), sent as an `Authorization: Bearer`
+  header. Preferred.
 - `api_key` + `app_key`: the legacy API key and Application key pair.
 
 [pat]: https://docs.datadoghq.com/account_management/personal-access-tokens/
+[sat]: https://docs.datadoghq.com/account_management/service-access-tokens/
 
 ## Usage
 

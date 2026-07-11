@@ -150,9 +150,9 @@ func listTools(ctx context.Context, session *mcp.ClientSession) ([]*mcp.Tool, er
 // Datadog MCP server for the given org: a bearer token when a PAT/SAT is
 // configured, otherwise the legacy API key + Application key pair.
 func authHeaders(org *OrgConfig) map[string]string {
-	if org.UsePAT() {
+	if org.UseToken() {
 		return map[string]string{
-			"Authorization": "Bearer " + org.PAT,
+			"Authorization": "Bearer " + org.Token,
 		}
 	}
 
