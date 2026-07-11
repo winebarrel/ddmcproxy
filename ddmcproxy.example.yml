@@ -1,0 +1,13 @@
+# Optional. Default: https://mcp.datadoghq.com/api/unstable/mcp-server/mcp
+# endpoint: https://mcp.datadoghq.com/api/unstable/mcp-server/mcp
+
+# Values are expanded with os.ExpandEnv, so ${ENV_VAR} references work.
+orgs:
+  - name: foo
+    api_key: ${FOO_DD_API_KEY}
+    app_key: ${FOO_DD_APP_KEY}
+  - name: bar
+    api_key: ${BAR_DD_API_KEY}
+    app_key: ${BAR_DD_APP_KEY}
+    # Optional per-org endpoint override (e.g. for a different Datadog site).
+    # endpoint: https://mcp.datadoghq.eu/api/unstable/mcp-server/mcp

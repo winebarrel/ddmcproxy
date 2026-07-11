@@ -1,1 +1,87 @@
 # ddmcproxy
+
+A multi-org proxy for the [Datadog MCP Server](https://docs.datadoghq.com/bits_ai/mcp_server/setup/).
+
+The Datadog MCP server does not support multiple organizations in a single
+connection. `ddmcproxy` sits in front of it, mirrors all of its tools, and adds
+an `org` argument to each tool. When a tool is called, the proxy picks the
+matching org's API/APP keys and forwards the request to the Datadog MCP server.
+
+```
+Claude Code ──stdio──▶ ddmcproxy ──HTTP(DD_API_KEY/DD_APPLICATION_KEY)──▶ Datadog MCP
+                          │
+                          ├─ org=foo ─▶ foo's keys
+                          └─ org=bar ─▶ bar's keys
+```
+
+## Install
+
+```
+go install github.com/winebarrel/ddmcproxy/cmd/ddmcproxy@latest
+```
+
+## Configuration
+
+Create a YAML config file. Values are passed through `os.ExpandEnv`, so secrets
+can be referenced as `${ENV_VAR}` instead of being written in plain text.
+
+```yaml
+# ddmcproxy.yml
+
+# Optional. Default: https://mcp.datadoghq.com/api/unstable/mcp-server/mcp
+# endpoint: https://mcp.datadoghq.com/api/unstable/mcp-server/mcp
+
+orgs:
+  - name: foo
+    api_key: ${FOO_DD_API_KEY}
+    app_key: ${FOO_DD_APP_KEY}
+  - name: bar
+    api_key: ${BAR_DD_API_KEY}
+    app_key: ${BAR_DD_APP_KEY}
+    # Optional per-org endpoint override (e.g. for a different Datadog site).
+    # endpoint: https://mcp.datadoghq.eu/api/unstable/mcp-server/mcp
+```
+
+## Usage
+
+```
+Usage: ddmcproxy --config=STRING [flags]
+
+Flags:
+  -h, --help             Show help.
+  -c, --config=STRING    Config file path ($DDMCPROXY_CONFIG).
+      --version
+```
+
+### Claude Code
+
+Register it as an MCP server:
+
+```json
+{
+  "mcpServers": {
+    "datadog": {
+      "command": "ddmcproxy",
+      "args": ["--config", "/path/to/ddmcproxy.yml"]
+    }
+  }
+}
+```
+
+Then call a tool with the target org, e.g.:
+
+> Using the **foo** org, search Datadog logs for errors in the last hour.
+
+Every proxied tool gains a required `org` argument whose allowed values are the
+org names from your config.
+
+## How it works
+
+- On startup the proxy connects to the Datadog MCP server as the **first**
+  configured org and lists the available tools. All orgs are assumed to expose
+  the same set of tools.
+- Each upstream tool is re-registered with a required `org` string argument
+  (enumerated over the configured org names).
+- On a tool call, the proxy strips the `org` argument, looks up that org's keys,
+  connects (lazily, then cached) to the Datadog MCP server with the
+  `DD_API_KEY` / `DD_APPLICATION_KEY` headers, and forwards the call.
