@@ -3,6 +3,9 @@
 #
 # Binaries for programs and plugins
 /ddmcproxy
+
+# GoReleaser output
+/dist
 *.exe
 *.exe~
 *.dll
