@@ -39,6 +39,10 @@ func NewProxy(config *Config, version string) *Proxy {
 // Run connects to the upstream server, mirrors its tools and serves the proxy
 // over stdio until the client disconnects or ctx is cancelled.
 func (proxy *Proxy) Run(ctx context.Context) error {
+	if proxy.config == nil || len(proxy.config.Orgs) == 0 {
+		return fmt.Errorf("no orgs are configured")
+	}
+
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    appName,
 		Version: proxy.version,
@@ -81,12 +85,18 @@ func (proxy *Proxy) Run(ctx context.Context) error {
 
 // session returns a connected upstream session for the org, creating and
 // caching it on first use.
+//
+// The upstream connection is dialed without holding proxy.mu so that a slow or
+// hung endpoint does not block tool calls for other orgs. If two callers race to
+// connect the same org, both dial but only the first published session is kept;
+// the loser's session is closed.
 func (proxy *Proxy) session(ctx context.Context, org string) (*mcp.ClientSession, error) {
 	proxy.mu.Lock()
-	defer proxy.mu.Unlock()
+	cached, ok := proxy.sessions[org]
+	proxy.mu.Unlock()
 
-	if session, ok := proxy.sessions[org]; ok {
-		return session, nil
+	if ok {
+		return cached, nil
 	}
 
 	orgConfig := proxy.config.Org(org)
@@ -116,7 +126,17 @@ func (proxy *Proxy) session(ctx context.Context, org string) (*mcp.ClientSession
 		return nil, err
 	}
 
+	proxy.mu.Lock()
+	// Another goroutine may have connected the same org while we were dialing.
+	if existing, ok := proxy.sessions[org]; ok {
+		proxy.mu.Unlock()
+		_ = session.Close()
+
+		return existing, nil
+	}
+
 	proxy.sessions[org] = session
+	proxy.mu.Unlock()
 
 	return session, nil
 }
