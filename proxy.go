@@ -43,6 +43,10 @@ func (proxy *Proxy) Run(ctx context.Context) error {
 		return fmt.Errorf("no orgs are configured")
 	}
 
+	// Close cached upstream sessions when the proxy stops (client disconnect or
+	// ctx cancellation) so their connections are released promptly.
+	defer proxy.closeSessions()
+
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    appName,
 		Version: proxy.version,

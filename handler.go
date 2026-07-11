@@ -187,6 +187,18 @@ func (proxy *Proxy) dropSession(org string) {
 	}
 }
 
+// closeSessions closes and clears every cached upstream session.
+func (proxy *Proxy) closeSessions() {
+	proxy.mu.Lock()
+	sessions := proxy.sessions
+	proxy.sessions = map[string]*mcp.ClientSession{}
+	proxy.mu.Unlock()
+
+	for _, session := range sessions {
+		_ = session.Close()
+	}
+}
+
 func errorResult(format string, args ...any) *mcp.CallToolResult {
 	return &mcp.CallToolResult{
 		IsError: true,
