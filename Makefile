@@ -7,7 +7,7 @@ vet:
 
 .PHONY: test
 test:
-	go test -v ./...
+	go test -v $(TEST_OPTS) ./...
 
 .PHONY: build
 build:
